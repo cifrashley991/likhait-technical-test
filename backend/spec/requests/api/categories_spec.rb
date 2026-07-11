@@ -22,4 +22,45 @@ RSpec.describe "Api::Categories", type: :request do
       expect(json.map { |c| c["name"] }).to eq([ "Food", "Supplies", "Transport" ])
     end
   end
+
+  describe "POST /api/categories" do
+    context "with valid parameters" do
+      let(:valid_params) { { category: { name: "Groceries" } } }
+
+      it "creates a new category" do
+        expect {
+          post "/api/categories", params: valid_params, as: :json
+        }.to change(Category, :count).by(1)
+
+        expect(response).to have_http_status(:created)
+        json = JSON.parse(response.body)
+        expect(json["name"]).to eq("Groceries")
+      end
+    end
+
+    context "with invalid parameters" do
+      it "rejects a duplicate category name" do
+        Category.create!(name: "Groceries")
+
+        duplicate_params = { category: { name: "Groceries" } }
+
+        expect {
+          post "/api/categories", params: duplicate_params, as: :json
+        }.not_to change(Category, :count)
+
+        post "/api/categories", params: duplicate_params, as: :json
+        expect(response).to have_http_status(:unprocessable_entity)
+      end
+
+      it "rejects an empty category name" do
+        empty_params = { category: { name: "" } }
+
+        expect {
+          post "/api/categories", params: empty_params, as: :json
+        }.not_to change(Category, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+      end
+    end
+  end
 end
